@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <link rel="shortcut icon" href="#">
     <style>
 @keyframes marquee {
         0% { transform: translateX(100%); }
@@ -739,7 +740,12 @@
                     ${planBadge}
                     <div class="flex justify-between items-start mb-2 w-full">
                         <div class="flex-1 min-w-0">
-                            <div class="text-[9px] font-bold text-slate-400 uppercase">${item.shift || 'Không rõ'} - <span class="text-slate-600">${item.leader || 'N/A'}</span></div>
+                           <div class="text-[9px] font-bold text-slate-400 uppercase flex items-center gap-1.5">
+    ${item.shift || 'Không rõ'} - <span class="text-slate-600">${item.leader || 'N/A'}</span>
+    <button onclick="toggleShiftLeader('${item.id}', '${item.station}', '${item.shift}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 px-1 py-0.5 rounded border border-blue-100 transition-colors" title="Chuyển Ca/Trưởng máy phụ trách">
+        <i class="fa-solid fa-retweet"></i> Đổi
+    </button>
+</div>
                             <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
                                 <h3 class="text-sm font-black text-slate-800 font-mono tracking-tight truncate">${item.code}</h3>
                                 ${statusBadge}
@@ -894,6 +900,42 @@
             const pMatch = plansData.find(p => p.styleMO.toUpperCase() === item.code);
             if(pMatch) db.ref(`plans/${pMatch.id}`).update({ tinhTrang: 'Hoàn Thành' });
         }
+// HÀM CHUYỂN ĐỔI CA / TRƯỞNG MÁY PHỤ TRÁCH ĐƠN HÀNG
+function toggleShiftLeader(id, station, currentShift) {
+    // Lấy thông tin trưởng máy của trạm hiện tại từ cấu hình
+    const mData = machinesData[station] || { shift1Leader: 'Chưa có', shift2Leader: 'Chưa có' };
+    
+    // Xác định ca và trưởng máy sẽ chuyển tới
+    let nextShift = 'Ca 1';
+    let nextLeader = mData.shift1Leader;
+
+    // Nếu ca hiện tại đang là Ca 1, thì mục tiêu đổi sẽ là Ca 2
+    if (currentShift === 'Ca 1') {
+        nextShift = 'Ca 2';
+        nextLeader = mData.shift2Leader;
+    }
+
+    // Hiển thị hộp thoại xác nhận
+    if (!confirm(`Xác nhận chuyển đơn hàng này sang ${nextShift} (Trưởng máy: ${nextLeader})?`)) return;
+
+    // 1. Cập nhật dữ liệu trên máy đang chạy (active_styles)
+    db.ref(`active_styles/${id}`).update({ 
+        shift: nextShift, 
+        leader: nextLeader 
+    });
+
+    // 2. Cập nhật đồng bộ sang bảng Plan nếu mã này có Plan
+    const item = stylesData.find(s => s.id === id);
+    if (item) {
+        const pMatch = plansData.find(p => p.styleMO.toUpperCase() === item.code);
+        if (pMatch) {
+            db.ref(`plans/${pMatch.id}`).update({ 
+                shift: nextShift, 
+                leader: nextLeader 
+            });
+        }
+    }
+}
 
         // HÀM ĐỊNH DẠNG THỜI GIAN NGÀY GIỜ
         function formatDateTime(timestamp) {
