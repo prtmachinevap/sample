@@ -417,8 +417,38 @@
 
         window.onload = function() {
             const savedUser = localStorage.getItem('mes_user_session');
-            if (savedUser && VALID_USERS[savedUser]) loginSuccess(savedUser);
+            if (savedUser && VALID_USERS[savedUser]) {
+                loginSuccess(savedUser);
+            } else {
+                guestMode(); // Nếu chưa đăng nhập -> Mở chế độ chỉ xem
+            }
         };
+// Chế độ Khách: Chỉ xem, ẩn màn hình login, hiện dashboard
+        function guestMode() {
+            currentUser = null;
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-dashboard').classList.remove('hidden');
+            
+            // Hiển thị nút Đăng nhập ở góc (thay vì tên tài khoản)
+            const userDisplay = document.getElementById('user-display');
+            if(userDisplay) {
+                userDisplay.innerHTML = `<button onclick="showLoginScreen()" class="text-blue-600 font-bold hover:underline text-sm"><i class="fa-solid fa-right-to-bracket"></i> Đăng nhập hệ thống</button>`;
+            }
+
+            // Cho phép khách xem tất cả các tab (giống Admin nhưng không thao tác được)
+            document.getElementById('tab-controls').classList.remove('hidden');
+            document.querySelectorAll('.machine-box').forEach(el => el.classList.remove('hidden'));
+            switchTab('may-tu-dong');
+
+            // Bắt đầu đọc dữ liệu Firebase để hiển thị
+            initFirebaseListeners();
+        }
+
+        // Hiện lại màn hình Đăng nhập khi khách muốn thao tác
+        function showLoginScreen() {
+            document.getElementById('main-dashboard').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+        }
 
         function handleLogin() {
             const u = document.getElementById('login-user').value.trim();
@@ -434,11 +464,16 @@
             location.reload();
         }
 
+        // Cập nhật lại hàm loginSuccess để hiển thị tên và nút Đăng xuất
         function loginSuccess(user) {
             currentUser = user;
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('main-dashboard').classList.remove('hidden');
-            document.getElementById('user-display').innerText = `Tài khoản: ${user}`;
+            
+            const userDisplay = document.getElementById('user-display');
+            if(userDisplay) {
+                userDisplay.innerHTML = `Tài khoản: <span class="font-bold">${user}</span>`;
+            }
             
             if(user === 'Admin') {
                 document.getElementById('admin-leader-btn').classList.remove('hidden');
@@ -534,6 +569,7 @@
         }
 
         function openCheckInModal(stationName) {
+if (!currentUser) return alert("Vui lòng Đăng nhập để sử dụng chức năng này!");
             document.getElementById('modal-station-id').value = stationName;
             const mData = machinesData[stationName] || { shift1Leader: 'Chưa có', shift2Leader: 'Chưa có' };
             const container = document.getElementById('shift-selection-container');
@@ -579,6 +615,7 @@
         }
 
         function openAdminLeadersModal() {
+if (!currentUser) return alert("Vui lòng Đăng nhập để sử dụng chức năng này!");
             const container = document.getElementById('admin-leaders-form-container');
             container.innerHTML = '';
             STATIONS.forEach(st => {
@@ -613,6 +650,7 @@
         }
 
         function openPlanForm(id = null) {
+if (!currentUser) return alert("Vui lòng Đăng nhập để sử dụng chức năng này!");
             const fields = ['id','image','styleMO','loaiMau','viTriIn','graphics','filmCode','mauVai','kyThuatIn','soLuong','soKhung','machine','film','khung','muc','ngayReady','ngayTra','tinhTrang','remark'];
             fields.forEach(f => document.getElementById(`pf-${f}`).value = '');
             document.getElementById('plan-modal-title').innerText = 'TẠO MỚI PLAN KẾ HOẠCH SẢN XUẤT MẪU';
@@ -650,13 +688,27 @@
             closeModal('plan-form-modal');
         }
 
-        function deletePlan(id) { if(confirm('Bạn có chắc chắn muốn xóa Plan mẫu này?')) db.ref(`plans/${id}`).remove(); }
+        function deletePlan(id) {
+if (!currentUser) return alert("Vui lòng Đăng nhập để sử dụng chức năng này!"); if(confirm('Bạn có chắc chắn muốn xóa Plan mẫu này?')) db.ref(`plans/${id}`).remove(); }
 
         function renderPlanTable() {
             const tbody = document.getElementById('plan-table-body');
             tbody.innerHTML = '';
+            
             plansData.forEach(p => {
-                let stStyle = p.tinhTrang==='Hoàn Thành' ? 'bg-emerald-100 text-emerald-700' : (p.tinhTrang==='Chưa làm'?'bg-slate-100 text-slate-500':'bg-blue-100 text-blue-700');
+                let stStyle = p.tinhTrang === 'Hoàn Thành' ? 'bg-emerald-100 text-emerald-700' : (p.tinhTrang === 'Chưa làm' ? 'bg-slate-100 text-slate-500' : 'bg-blue-100 text-blue-700');
+                
+                // Khởi tạo nút Xem mặc định cho tất cả mọi người
+                let actionBtns = `<button onclick="viewPlan('${p.id}')" class="text-blue-500 hover:text-blue-700 mx-1.5"><i class="fa-solid fa-eye"></i></button>`;
+
+                // Nếu có currentUser (đã đăng nhập) thì cộng thêm nút Sửa và Xóa
+                if (currentUser) {
+                    actionBtns += `
+                        <button onclick="openPlanForm('${p.id}')" class="text-amber-500 hover:text-amber-700 mx-1.5"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deletePlan('${p.id}')" class="text-rose-500 hover:text-rose-700 mx-1.5"><i class="fa-solid fa-trash"></i></button>
+                    `;
+                }
+
                 tbody.innerHTML += `
                     <tr class="hover:bg-slate-50 border-b">
                         <td class="p-2"><img src="${p.image || 'https://placehold.co/80x80?text=No+Image'}" class="w-10 h-10 object-cover rounded border"></td>
@@ -670,9 +722,7 @@
                         <td class="p-3 font-mono text-rose-500">${p.ngayTra || '-'}</td>
                         <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${stStyle}">${p.tinhTrang}</span></td>
                         <td class="p-3 text-center">
-                            <button onclick="viewPlan('${p.id}')" class="text-blue-500 hover:text-blue-700 mx-1.5"><i class="fa-solid fa-eye"></i></button>
-                            <button onclick="openPlanForm('${p.id}')" class="text-amber-500 hover:text-amber-700 mx-1.5"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="deletePlan('${p.id}')" class="text-rose-500 hover:text-rose-700 mx-1.5"><i class="fa-solid fa-trash"></i></button>
+                            ${actionBtns}
                         </td>
                     </tr>
                 `;
@@ -736,22 +786,37 @@
                 card.className = "bg-white border border-slate-200 rounded-lg p-3 shadow-sm relative text-xs";
                 let planBadge = hasPlan ? `<div class="absolute -top-2.5 -right-1.5 bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded border shadow animate-pulse"><i class="fa-solid fa-clipboard-list"></i> Có Plan</div>` : '';
 
+                const changeLeaderBtn = currentUser ? `
+                    <button onclick="toggleShiftLeader('${item.id}', '${item.station}', '${item.shift}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 px-1 py-0.5 rounded border border-blue-100 transition-colors" title="Chuyển Ca/Trưởng máy phụ trách">
+                        <i class="fa-solid fa-retweet"></i> Đổi
+                    </button>` : '';
+
+                const deleteBtn = currentUser ? `
+                    <button onclick="deleteStyle('${item.id}')" class="text-slate-300 hover:text-rose-500 ml-1 shrink-0"><i class="fa-solid fa-xmark"></i></button>` : '';
+
+                const actionButtons = currentUser ? `
+                    <div class="grid grid-cols-2 gap-1">
+                        <button onclick="toggleStatus('${item.id}', 'Setup')" class="text-[10px] font-bold py-1.5 rounded transition-colors ${item.status==='Setup'?'bg-amber-500 text-white font-black shadow-inner':'bg-slate-100 text-slate-600'}">🛠️ Setup</button>
+                        <button onclick="togglePrint('${item.id}')" class="text-[10px] font-bold py-1.5 rounded-md transition-colors ${isPrint ? 'bg-emerald-600 text-white shadow-inner' : 'bg-white text-slate-700 border border-slate-200'}">🎨 In Mẫu</button>
+                        <button onclick="checkoutStyle('${item.id}')" class="col-span-2 mt-1 text-[10px] font-bold py-1.5 rounded bg-slate-800 hover:bg-slate-900 text-white transition-all">
+                            <i class="fa-solid fa-circle-check text-emerald-400"></i> Hoàn Thành Xuất Mẫu
+                        </button>
+                    </div>` : '';
+
                 card.innerHTML = `
                     ${planBadge}
                     <div class="flex justify-between items-start mb-2 w-full">
                         <div class="flex-1 min-w-0">
                            <div class="text-[9px] font-bold text-slate-400 uppercase flex items-center gap-1.5">
-    ${item.shift || 'Không rõ'} - <span class="text-slate-600">${item.leader || 'N/A'}</span>
-    <button onclick="toggleShiftLeader('${item.id}', '${item.station}', '${item.shift}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 px-1 py-0.5 rounded border border-blue-100 transition-colors" title="Chuyển Ca/Trưởng máy phụ trách">
-        <i class="fa-solid fa-retweet"></i> Đổi
-    </button>
-</div>
+                                ${item.shift || 'Không rõ'} - <span class="text-slate-600">${item.leader || 'N/A'}</span>
+                                ${changeLeaderBtn}
+                           </div>
                             <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
                                 <h3 class="text-sm font-black text-slate-800 font-mono tracking-tight truncate">${item.code}</h3>
                                 ${statusBadge}
                             </div>
                         </div>
-                        <button onclick="deleteStyle('${item.id}')" class="text-slate-300 hover:text-rose-500 ml-1 shrink-0"><i class="fa-solid fa-xmark"></i></button>
+                        ${deleteBtn}
                     </div>
 
                     <div class="grid grid-cols-2 gap-1.5 mb-2.5">
@@ -765,18 +830,12 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-1">
-        <button onclick="toggleStatus('${item.id}', 'Setup')" class="text-[10px] font-bold py-1.5 rounded transition-colors ${item.status==='Setup'?'bg-amber-500 text-white font-black shadow-inner':'bg-slate-100 text-slate-600'}">🛠️ Setup</button>
-        <button onclick="togglePrint('${item.id}')" class="text-[10px] font-bold py-1.5 rounded-md transition-colors ${isPrint ? 'bg-emerald-600 text-white shadow-inner' : 'bg-white text-slate-700 border border-slate-200'}">🎨 In Mẫu</button>
-        <button onclick="checkoutStyle('${item.id}')" class="col-span-2 mt-1 text-[10px] font-bold py-1.5 rounded bg-slate-800 hover:bg-slate-900 text-white transition-all">
-            <i class="fa-solid fa-circle-check text-emerald-400"></i> Hoàn Thành Xuất Mẫu
-        </button>
-    </div>
-    
-    <div id="warning-box-${item.id}" class="hidden mt-2 overflow-hidden bg-rose-100 border border-rose-300 rounded text-rose-600 text-[10px] font-black py-1">
-        <div class="animate-marquee w-full">⚠️ ĐÃ QUÁ 3 TIẾNG SETUP! ⚠️</div>
-    </div>
-`;
+                    ${actionButtons}
+                    
+                    <div id="warning-box-${item.id}" class="hidden mt-2 overflow-hidden bg-rose-100 border border-rose-300 rounded text-rose-600 text-[10px] font-black py-1">
+                        <div class="animate-marquee w-full">⚠️ ĐÃ QUÁ 3 TIẾNG SETUP! ⚠️</div>
+                    </div>
+                `;
 
                 let targetId = '';
                 if(item.station === 'S1') targetId = 'container-S1';
@@ -839,6 +898,7 @@
 
         // 10. THÊM TÍNH NĂNG XÁC NHẬN KHI CHUYỂN ĐỔI TRẠNG THÁI KHÁC NHAU
         function toggleStatus(id, targetState) {
+if (!currentUser) return alert("Vui lòng Đăng nhập để sử dụng chức năng này!");
             const item = stylesData.find(s => s.id === id);
             if(!item) return;
 
@@ -868,10 +928,12 @@
 
         function togglePrint(id) { toggleStatus(id, 'In mẫu'); }
 
-        function deleteStyle(id) { if(confirm('Bạn có chắc chắn muốn hủy đơn hàng đang chạy này?')) db.ref(`active_styles/${id}`).remove(); }
+        function deleteStyle(id) {
+if (!currentUser) return alert("Vui lòng Đăng nhập để sử dụng chức năng này!"); if(confirm('Bạn có chắc chắn muốn hủy đơn hàng đang chạy này?')) db.ref(`active_styles/${id}`).remove(); }
 
         // 11. ĐÓNG KPI: GHI NHẬN TỔNG THỜI GIAN, BẮT ĐẦU VÀ KẾ THÚC VÀO LỊCH SỬ
         function checkoutStyle(id) {
+if (!currentUser) return alert("Vui lòng Đăng nhập để sử dụng chức năng này!");
             const item = stylesData.find(s => s.id === id);
             if (!item || !confirm(`Xác nhận hoàn thành kiểm tra và đóng KPI cho mã: ${item.code}?`)) return;
 
@@ -902,6 +964,7 @@
         }
 // HÀM CHUYỂN ĐỔI CA / TRƯỞNG MÁY PHỤ TRÁCH ĐƠN HÀNG
 function toggleShiftLeader(id, station, currentShift) {
+if (!currentUser) return alert("Vui lòng Đăng nhập để sử dụng chức năng này!");
     // Lấy thông tin trưởng máy của trạm hiện tại từ cấu hình
     const mData = machinesData[station] || { shift1Leader: 'Chưa có', shift2Leader: 'Chưa có' };
     
