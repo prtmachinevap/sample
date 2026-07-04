@@ -67,6 +67,10 @@
                     <button onclick="openHistoryModal()" class="text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded border border-blue-200 transition-colors">
                         <i class="fa-solid fa-chart-line mr-1"></i> Lịch Sử KPI
                     </button>
+
+<button onclick="viewRecentCompleted()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-3 rounded text-xs ml-2 shadow transition">
+    <i class="fa-solid fa-clock-rotate-left"></i> 10 Đơn Xuất Mẫu Gần Nhất
+</button>
                     <span class="text-slate-300">|</span>
                     <button onclick="handleLogout()" class="text-rose-500 hover:text-rose-600 font-bold"><i class="fa-solid fa-power-off"></i> Thoát</button>
                 </div>
@@ -756,175 +760,293 @@ if (!currentUser) return alert("Vui lòng Đăng nhập để sử dụng chức
 
         // 9. RENDER THẺ MÁY: TRẠNG THÁI HIỂN THỊ CÙNG DÒNG STYLE + HIỆU ỨNG
         function renderUI() {
-            STATIONS.forEach(st => {
-                let targetId = '';
-                if(st === 'S1') targetId = 'container-S1';
-                else if(st === 'S2') targetId = 'container-S2';
-                else if(st === 'S3') targetId = 'container-S3';
-                else if(st === 'S4') targetId = 'container-S4';
-                else if(st === 'C1') targetId = 'container-S5_C1';
-                else if(st === 'Bàn In Tay 1') targetId = 'container-BanTay1';
-                else if(st === 'Bàn In Tay 2') targetId = 'container-BanTay2';
-                if(targetId) { const el = document.getElementById(targetId); if(el) el.innerHTML = ''; }
-            });
+    STATIONS.forEach(st => {
+        let targetId = '';
+        if(st === 'S1') targetId = 'container-S1';
+        else if(st === 'S2') targetId = 'container-S2';
+        else if(st === 'S3') targetId = 'container-S3';
+        else if(st === 'S4') targetId = 'container-S4';
+        else if(st === 'C1') targetId = 'container-S5_C1';
+        else if(st === 'Bàn In Tay 1') targetId = 'container-BanTay1';
+        else if(st === 'Bàn In Tay 2') targetId = 'container-BanTay2';
+        if(targetId) { const el = document.getElementById(targetId); if(el) el.innerHTML = ''; }
+    });
 
-            stylesData.forEach(item => {
-                const isPrint = item.status === 'In mẫu';
-                const hasPlan = plansData.some(p => p.styleMO.toUpperCase() === item.code);
-                
-                // Tối ưu nhãn hiển thị trạng thái và hiệu ứng nhấp nháy cùng dòng với Style
-                let statusBadge = '';
-                if(item.status === 'Setup') {
-                    statusBadge = `<span class="bg-amber-100 text-amber-700 border border-amber-200 font-black px-1.5 py-0.5 rounded text-[10px] animate-pulse flex items-center gap-1 shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Đang setup</span>`;
-                } else if(item.status === 'In mẫu') {
-                    statusBadge = `<span class="bg-emerald-100 text-emerald-700 border border-emerald-200 font-black px-1.5 py-0.5 rounded text-[10px] animate-pulse flex items-center gap-1 shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Đang in mẫu</span>`;
-                } else {
-                    statusBadge = `<span class="bg-slate-100 text-slate-500 border border-slate-200 font-bold px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1 shrink-0">Tạm dừng</span>`;
-                }
-
-                const card = document.createElement('div');
-                card.className = "bg-white border border-slate-200 rounded-lg p-3 shadow-sm relative text-xs";
-                let planBadge = hasPlan ? `<div class="absolute -top-2.5 -right-1.5 bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded border shadow animate-pulse"><i class="fa-solid fa-clipboard-list"></i> Có Plan</div>` : '';
-
-                const changeLeaderBtn = currentUser ? `
-                    <button onclick="toggleShiftLeader('${item.id}', '${item.station}', '${item.shift}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 px-1 py-0.5 rounded border border-blue-100 transition-colors" title="Chuyển Ca/Trưởng máy phụ trách">
-                        <i class="fa-solid fa-retweet"></i> Đổi
-                    </button>` : '';
-
-                const deleteBtn = currentUser ? `
-                    <button onclick="deleteStyle('${item.id}')" class="text-slate-300 hover:text-rose-500 ml-1 shrink-0"><i class="fa-solid fa-xmark"></i></button>` : '';
-
-                const actionButtons = currentUser ? `
-                    <div class="grid grid-cols-2 gap-1">
-                        <button onclick="toggleStatus('${item.id}', 'Setup')" class="text-[10px] font-bold py-1.5 rounded transition-colors ${item.status==='Setup'?'bg-amber-500 text-white font-black shadow-inner':'bg-slate-100 text-slate-600'}">🛠️ Setup</button>
-                        <button onclick="togglePrint('${item.id}')" class="text-[10px] font-bold py-1.5 rounded-md transition-colors ${isPrint ? 'bg-emerald-600 text-white shadow-inner' : 'bg-white text-slate-700 border border-slate-200'}">🎨 In Mẫu</button>
-                        <button onclick="checkoutStyle('${item.id}')" class="col-span-2 mt-1 text-[10px] font-bold py-1.5 rounded bg-slate-800 hover:bg-slate-900 text-white transition-all">
-                            <i class="fa-solid fa-circle-check text-emerald-400"></i> Hoàn Thành Xuất Mẫu
-                        </button>
-                    </div>` : '';
-
-                card.innerHTML = `
-                    ${planBadge}
-                    <div class="flex justify-between items-start mb-2 w-full">
-                        <div class="flex-1 min-w-0">
-                           <div class="text-[9px] font-bold text-slate-400 uppercase flex items-center gap-1.5">
-                                ${item.shift || 'Không rõ'} - <span class="text-slate-600">${item.leader || 'N/A'}</span>
-                                ${changeLeaderBtn}
-                           </div>
-                            <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
-                                <h3 class="text-sm font-black text-slate-800 font-mono tracking-tight truncate">${item.code}</h3>
-                                ${statusBadge}
-                            </div>
-                        </div>
-                        ${deleteBtn}
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-1.5 mb-2.5">
-                        <div class="bg-amber-50/60 p-1.5 border border-amber-100 rounded text-center">
-                            <span class="text-[9px] font-bold text-amber-600 block uppercase">Setup Time</span>
-                            <div id="clock-setup-${item.id}" class="font-mono text-sm font-black text-slate-600">00:00:00</div>
-                        </div>
-                        <div class="bg-emerald-50/60 p-1.5 border border-emerald-100 rounded text-center">
-                            <span class="text-[9px] font-bold text-emerald-600 block uppercase">Print Time</span>
-                            <div id="clock-print-${item.id}" class="font-mono text-sm font-black text-slate-600">00:00:00</div>
-                        </div>
-                    </div>
-
-                    ${actionButtons}
-                    
-                    <div id="warning-box-${item.id}" class="hidden mt-2 overflow-hidden bg-rose-100 border border-rose-300 rounded text-rose-600 text-[10px] font-black py-1">
-                        <div class="animate-marquee w-full">⚠️ ĐÃ QUÁ 3 TIẾNG SETUP! ⚠️</div>
-                    </div>
-                `;
-
-                let targetId = '';
-                if(item.station === 'S1') targetId = 'container-S1';
-                else if(item.station === 'S2') targetId = 'container-S2';
-                else if(item.station === 'S3') targetId = 'container-S3';
-                else if(item.station === 'S4') targetId = 'container-S4';
-                else if(item.station === 'C1') targetId = 'container-S5_C1';
-                else if(item.station === 'Bàn In Tay 1') targetId = 'container-BanTay1';
-                else if(item.station === 'Bàn In Tay 2') targetId = 'container-BanTay2';
-                if (targetId) { const tc = document.getElementById(targetId); if(tc) tc.appendChild(card); }
-            });
-
-            STATIONS.forEach(st => {
-                const el = document.getElementById(`container-${st === 'C1' ? 'S5_C1' : st.replace(/\s+/g, '')}`);
-                if (el && el.children.length === 0) {
-                    el.innerHTML = `<div class="flex items-center justify-center py-5 text-slate-400 border border-dashed border-slate-200 rounded-lg w-full text-[10px]"><span>Chưa có mã</span></div>`;
-                }
-            });
-            updateLiveClocks();
+    stylesData.forEach(item => {
+const isPrint = item.status === 'In mẫu';
+        const isSetup = item.status === 'Setup';
+        const isDown = item.status === 'Máy hỏng'; // Nhận diện trạng thái Máy hỏng
+        const hasPlan = plansData.some(p => p.styleMO.toUpperCase() === item.code);
+        
+        // 1. Cập nhật nhãn trạng thái (Hiển thị "MÁY HỎNG")
+        let statusBadge = '';
+        if(isSetup) {
+            statusBadge = `<span class="bg-amber-100 text-amber-700 border border-amber-200 font-black px-1.5 py-0.5 rounded text-[10px] animate-pulse flex items-center gap-1 shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Đang setup</span>`;
+        } else if(isPrint) {
+            statusBadge = `<span class="bg-emerald-100 text-emerald-700 border border-emerald-200 font-black px-1.5 py-0.5 rounded text-[10px] animate-pulse flex items-center gap-1 shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Đang in mẫu</span>`;
+        } else if(isDown) {
+            statusBadge = `<span class="bg-rose-100 text-rose-700 border border-rose-300 font-black px-1.5 py-0.5 rounded text-[10px] animate-pulse flex items-center gap-1 shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-rose-600"></span>MÁY HỎNG</span>`;
+        } else {
+            statusBadge = `<span class="bg-slate-100 text-slate-500 border border-slate-200 font-bold px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1 shrink-0">Tạm dừng</span>`;
         }
 
-        function updateLiveClocks() {
+        const card = document.createElement('div');
+        // 2. Bao viền đỏ và nền hồng nhạt nếu trạng thái là Máy hỏng
+        card.className = `bg-white border rounded-lg p-3 shadow-sm relative text-xs transition-colors ${isDown ? 'border-rose-500 bg-rose-50 shadow-rose-200/50' : 'border-slate-200'}`;
+        
+        let planBadge = hasPlan ? `<div class="absolute -top-2.5 -right-1.5 bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded border shadow animate-pulse"><i class="fa-solid fa-clipboard-list"></i> Có Plan</div>` : '';
+
+        const changeLeaderBtn = currentUser ? `
+            <button onclick="toggleShiftLeader('${item.id}', '${item.station}', '${item.shift}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 px-1 py-0.5 rounded border border-blue-100 transition-colors">
+                <i class="fa-solid fa-retweet"></i> Đổi
+            </button>` : '';
+
+        const deleteBtn = currentUser ? `<button onclick="deleteStyle('${item.id}')" class="text-slate-300 hover:text-rose-500 ml-1 shrink-0"><i class="fa-solid fa-xmark"></i></button>` : '';
+
+        // 3. Nút bấm Trạng Thái: Bao gồm Nút Máy Hỏng
+        const actionButtons = currentUser ? `
+            <div class="grid grid-cols-2 gap-1 mt-2">
+                <button onclick="toggleStatus('${item.id}', 'Setup')" class="text-[10px] font-bold py-1.5 rounded transition-colors ${isSetup ? 'bg-amber-500 text-white font-black shadow-inner' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">🛠️ Setup</button>
+                <button onclick="toggleStatus('${item.id}', 'In mẫu')" class="text-[10px] font-bold py-1.5 rounded transition-colors ${isPrint ? 'bg-emerald-600 text-white shadow-inner' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}">🎨 In Mẫu</button>
+                
+                <button onclick="toggleStatus('${item.id}', 'Máy hỏng')" class="col-span-2 text-[10px] font-bold py-1.5 rounded transition-colors ${isDown ? 'bg-rose-600 text-white shadow-inner' : 'bg-white text-rose-500 border border-rose-200 hover:bg-rose-50'}">
+                    <i class="fa-solid fa-triangle-exclamation"></i> ${isDown ? 'ĐANG BÁO HỎNG (Nhấn để gỡ)' : 'Trạng Thái: Máy Hỏng'}
+                </button>
+                
+                <button onclick="checkoutStyle('${item.id}')" class="col-span-2 mt-1 text-[10px] font-bold py-1.5 rounded bg-slate-800 hover:bg-slate-900 text-white transition-all">
+                    <i class="fa-solid fa-circle-check text-emerald-400"></i> Hoàn Thành Xuất Mẫu
+                </button>
+            </div>` : '';
+
+        // 4. Ô nhập ghi chú
+        const noteInput = `
+            <div class="mt-2">
+                <input type="text" placeholder="Ghi chú (nhập xong click ra ngoài để lưu)..." value="${item.remark || ''}" 
+                       onblur="updateStyleNote('${item.id}', this.value)" 
+                       class="w-full text-[10px] p-1.5 border border-slate-200 rounded outline-none focus:border-blue-400 bg-white shadow-inner text-slate-700">
+            </div>
+        `;
+
+        card.innerHTML = `
+            ${planBadge}
+            <div class="flex justify-between items-start mb-2 w-full">
+                <div class="flex-1 min-w-0">
+                    <div class="text-[9px] font-bold text-slate-400 uppercase flex items-center gap-1.5">
+                        ${item.shift || 'Không rõ'} - <span class="text-slate-600">${item.leader || 'N/A'}</span>
+                        ${changeLeaderBtn}
+                    </div>
+                    <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
+                        <h3 class="text-sm font-black text-slate-800 font-mono tracking-tight truncate">${item.code}</h3>
+                        ${statusBadge}
+                    </div>
+                </div>
+                ${deleteBtn}
+            </div>
+
+            <div class="grid grid-cols-2 gap-1.5 mb-1">
+                <div class="${isDown ? 'bg-white/50' : 'bg-amber-50/60'} p-1.5 border ${isDown ? 'border-rose-200' : 'border-amber-100'} rounded text-center">
+                    <span class="text-[9px] font-bold ${isDown ? 'text-rose-500' : 'text-amber-600'} block uppercase">Setup Time</span>
+                    <div id="clock-setup-${item.id}" class="font-mono text-sm font-black text-slate-600">00:00:00</div>
+                </div>
+                <div class="${isDown ? 'bg-white/50' : 'bg-emerald-50/60'} p-1.5 border ${isDown ? 'border-rose-200' : 'border-emerald-100'} rounded text-center">
+                    <span class="text-[9px] font-bold ${isDown ? 'text-rose-500' : 'text-emerald-600'} block uppercase">Print Time</span>
+                    <div id="clock-print-${item.id}" class="font-mono text-sm font-black text-slate-600">00:00:00</div>
+                </div>
+            </div>
+
+            ${actionButtons}
+            ${noteInput}
+        
+            
+            <div id="warning-box-${item.id}" class="hidden mt-2 overflow-hidden bg-rose-100 border border-rose-300 rounded text-rose-600 text-[10px] font-black py-1">
+                <div class="animate-marquee w-full">⚠️ ĐÃ QUÁ 3 TIẾNG SETUP! ⚠️</div>
+            </div>
+        `;
+
+        let targetId = '';
+        if(item.station === 'S1') targetId = 'container-S1';
+        else if(item.station === 'S2') targetId = 'container-S2';
+        else if(item.station === 'S3') targetId = 'container-S3';
+        else if(item.station === 'S4') targetId = 'container-S4';
+        else if(item.station === 'C1') targetId = 'container-S5_C1';
+        else if(item.station === 'Bàn In Tay 1') targetId = 'container-BanTay1';
+        else if(item.station === 'Bàn In Tay 2') targetId = 'container-BanTay2';
+        if (targetId) { const tc = document.getElementById(targetId); if(tc) tc.appendChild(card); }
+    });
+
+    STATIONS.forEach(st => {
+        const el = document.getElementById(`container-${st === 'C1' ? 'S5_C1' : st.replace(/\s+/g, '')}`);
+        if (el && el.children.length === 0) {
+            el.innerHTML = `<div class="flex items-center justify-center py-5 text-slate-400 border border-dashed border-slate-200 rounded-lg w-full text-[10px]"><span>Chưa có mã</span></div>`;
+        }
+    });
+    updateLiveClocks();
+}
+// Cập nhật Ghi chú lên Firebase
+function updateStyleNote(id, noteValue) {
+    if(!currentUser) return;
+    db.ref(`active_styles/${id}`).update({ remark: noteValue });
+}
+
+// Cập nhật lại hàm toggleStatus để text thông báo chuẩn xác hơn khi báo hỏng
+function toggleStatus(id, targetState) {
+    if (!currentUser) return alert("Vui lòng Đăng nhập để sử dụng chức năng này!");
+    const item = stylesData.find(s => s.id === id);
+    if (!item) return;
+
+    // 1. Xác định chính xác tên trạng thái để hiển thị thông báo
+    let stateLabel = '';
+    if (targetState === 'Setup') {
+        stateLabel = 'ĐANG SETUP';
+    } else if (targetState === 'In mẫu') {
+        stateLabel = 'ĐANG IN MẪU';
+    } else if (targetState === 'Máy hỏng') {
+        stateLabel = 'MÁY HỎNG (Dừng tính thời gian)';
+    }
+
+    // 2. Tạo câu hỏi xác nhận (Confirm)
+    const isActivating = item.status !== targetState;
+    const message = isActivating 
+        ? `Bạn muốn KÍCH HOẠT trạng thái [${stateLabel}] cho mã hàng ${item.code}?`
+        : `Bạn muốn GỠ trạng thái [${stateLabel}] cho mã hàng ${item.code}?`;
+
+    // Nếu người dùng chọn Cancel thì dừng lại
+    if (!confirm(message)) return;
+
+    // 3. Logic chốt thời gian của trạng thái trước đó
+    const now = Date.now();
+    const elapsed = Math.floor((now - item.lastStatusChange) / 1000);
+    
+    let setupAcc = item.setupAccumulated || 0;
+    let printAcc = item.printAccumulated || 0;
+
+    // Chỉ cộng dồn thời gian nếu trạng thái cũ là Setup hoặc In mẫu
+    if (item.status === 'Setup') setupAcc += elapsed;
+    if (item.status === 'In mẫu') printAcc += elapsed;
+    // Nếu trạng thái cũ đang là Máy hỏng, ta bỏ qua không cộng elapsed
+
+    // 4. Cập nhật lên Firebase
+    const nextState = isActivating ? targetState : 'Tạm dừng';
+
+    db.ref(`active_styles/${id}`).update({ 
+        status: nextState, 
+        setupAccumulated: setupAcc, 
+        printAccumulated: printAcc, 
+        lastStatusChange: now 
+    });
+    
+    // Cập nhật tình trạng Plan (nếu có)
+    const pMatch = plansData.find(p => p.styleMO.toUpperCase() === item.code);
+    if (pMatch) {
+        db.ref(`plans/${pMatch.id}`).update({ 
+            tinhTrang: nextState === 'Tạm dừng' ? 'Chưa làm' : `Đang ${nextState}` 
+        });
+    }
+} 
+// Hàm lấy & xem 10 đơn hoàn thành gần nhất
+function viewRecentCompleted() {
+    db.ref('kpi_history').orderByChild('completedAt').limitToLast(10).once('value', snap => {
+        let html = '';
+        let arr = [];
+        snap.forEach(c => { arr.push(c.val()); });
+        
+        arr.reverse().forEach((i, index) => {
+            const ketThuc = i.completedAt ? formatDateTime(i.completedAt) : 'N/A';
+            html += `
+                <div class="border-b border-slate-100 py-3 flex justify-between items-center hover:bg-slate-50 px-2 rounded">
+                    <div>
+                        <div class="text-[10px] text-slate-400 font-bold">#${index + 1} - MÁY: ${i.station}</div>
+                        <div class="font-black text-sm text-slate-800">${i.code}</div>
+                        <div class="text-[10px] text-slate-500">Hoàn thành: ${ketThuc}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-[10px] font-bold text-amber-600">Setup: ${formatTime(i.setupTime || 0)}</div>
+                        <div class="text-[10px] font-bold text-emerald-600">In: ${formatTime(i.printTime || 0)}</div>
+                    </div>
+                </div>`;
+        });
+        
+        document.getElementById('recent-10-list').innerHTML = html || '<div class="text-center text-slate-500 text-xs py-5">Chưa có đơn hàng nào xuất mẫu.</div>';
+        document.getElementById('recent-10-modal').classList.remove('hidden');
+    });
+}
+
+       function updateLiveClocks() {
     const now = Date.now();
     stylesData.forEach(item => {
-        const isSetup = item.status === 'Setup';
-        const isPrint = item.status === 'In mẫu';
-        
-        const delta = Math.floor((now - item.lastStatusChange) / 1000);
-        const setupTotal = (item.setupAccumulated || 0) + (isSetup ? delta : 0);
-        const printTotal = (item.printAccumulated || 0) + (isPrint ? delta : 0);
+        let setupTime = item.setupAccumulated || 0;
+        let printTime = item.printAccumulated || 0;
 
-        const setupClock = document.getElementById(`clock-setup-${item.id}`);
-        const printClock = document.getElementById(`clock-print-${item.id}`);
-        const warningBox = document.getElementById(`warning-box-${item.id}`); // Lấy phần tử khung cảnh báo
-        
-        if(setupClock) setupClock.innerText = formatTime(setupTotal);
-        if(printClock) printClock.innerText = formatTime(printTotal);
-        
-        if(setupClock) {
-            if (setupTotal >= 10800) {
-                // Quá 3 giờ: Chữ đỏ, nhấp nháy, HIỆN khung chữ chạy
-                setupClock.className = "font-mono text-sm font-black text-rose-600 bg-rose-100 px-1 rounded animate-pulse";
-                if(warningBox) warningBox.classList.remove('hidden'); 
-            } else {
-                // Dưới 3 giờ: Màu bình thường, ẨN khung chữ chạy
-                setupClock.className = isSetup 
-                    ? "font-mono text-sm font-black text-amber-600 animate-pulse" 
-                    : "font-mono text-sm font-black text-slate-500";
-                if(warningBox) warningBox.classList.add('hidden');
-            }
+        // CHỈ CỘNG THÊM GIÂY NẾU TRẠNG THÁI LÀ SETUP HOẶC IN MẪU
+        // Nếu là 'Máy hỏng' hoặc 'Tạm dừng', elapsedTime sẽ không được cộng vào!
+        if (item.status === 'Setup') {
+            setupTime += Math.floor((now - item.lastStatusChange) / 1000);
+        } else if (item.status === 'In mẫu') {
+            printTime += Math.floor((now - item.lastStatusChange) / 1000);
         }
-        
-        if(printClock) {
-            printClock.className = isPrint 
-                ? "font-mono text-sm font-black text-emerald-600 animate-pulse" 
-                : "font-mono text-sm font-black text-slate-500";
-        }
+
+        const elSetup = document.getElementById(`clock-setup-${item.id}`);
+        const elPrint = document.getElementById(`clock-print-${item.id}`);
+        if (elSetup) elSetup.textContent = formatTime(setupTime);
+        if (elPrint) elPrint.textContent = formatTime(printTime);
     });
 }
 
         // 10. THÊM TÍNH NĂNG XÁC NHẬN KHI CHUYỂN ĐỔI TRẠNG THÁI KHÁC NHAU
-        function toggleStatus(id, targetState) {
-if (!currentUser) return alert("Vui lòng Đăng nhập để sử dụng chức năng này!");
-            const item = stylesData.find(s => s.id === id);
-            if(!item) return;
+       function toggleStatus(id, targetState) {
+    if (!currentUser) return alert("Vui lòng Đăng nhập để sử dụng chức năng này!");
+    const item = stylesData.find(s => s.id === id);
+    if (!item) return;
 
-            const isActivating = item.status !== targetState;
-            const stateLabel = targetState === 'Setup' ? 'ĐANG SETUP' : 'ĐANG IN MẪU';
-            
-            const message = isActivating 
-                ? `Bạn muốn KÍCH HOẠT trạng thái [${stateLabel}] cho mã hàng ${item.code}?`
-                : `Bạn muốn TẠM DỪNG trạng thái [${stateLabel}] cho mã hàng ${item.code}?`;
+    // 1. Xác định chính xác tên trạng thái để hiển thị thông báo
+    let stateLabel = '';
+    if (targetState === 'Setup') {
+        stateLabel = 'ĐANG SETUP';
+    } else if (targetState === 'In mẫu') {
+        stateLabel = 'ĐANG IN MẪU';
+    } else if (targetState === 'Máy hỏng') {
+        stateLabel = 'MÁY HỎNG (Dừng tính thời gian)';
+    }
 
-            if(!confirm(message)) return; // Dừng xử lý nếu người dùng hủy bỏ
+    // 2. Tạo câu hỏi xác nhận (Confirm)
+    const isActivating = item.status !== targetState;
+    const message = isActivating 
+        ? `Bạn muốn KÍCH HOẠT trạng thái [${stateLabel}] cho mã hàng ${item.code}?`
+        : `Bạn muốn GỠ trạng thái [${stateLabel}] cho mã hàng ${item.code}?`;
 
-            const now = Date.now();
-            const elapsed = Math.floor((now - item.lastStatusChange) / 1000);
-            let setupAcc = item.setupAccumulated || 0;
-            let printAcc = item.printAccumulated || 0;
+    // Nếu người dùng chọn Cancel thì dừng lại
+    if (!confirm(message)) return;
 
-            if (item.status === 'Setup') setupAcc += elapsed;
-            if (item.status === 'In mẫu') printAcc += elapsed;
+    // 3. Logic chốt thời gian của trạng thái trước đó
+    const now = Date.now();
+    const elapsed = Math.floor((now - item.lastStatusChange) / 1000);
+    
+    let setupAcc = item.setupAccumulated || 0;
+    let printAcc = item.printAccumulated || 0;
 
-            const nextState = (item.status === targetState) ? 'Tạm dừng' : targetState;
-            db.ref(`active_styles/${id}`).update({ status: nextState, setupAccumulated: setupAcc, printAccumulated: printAcc, lastStatusChange: now });
-            
-            const pMatch = plansData.find(p => p.styleMO.toUpperCase() === item.code);
-            if(pMatch) db.ref(`plans/${pMatch.id}`).update({ tinhTrang: nextState === 'Tạm dừng' ? 'Chưa làm' : `Đang ${targetState}` });
-        }
+    // Chỉ cộng dồn thời gian nếu trạng thái cũ là Setup hoặc In mẫu
+    if (item.status === 'Setup') setupAcc += elapsed;
+    if (item.status === 'In mẫu') printAcc += elapsed;
+    // Nếu trạng thái cũ đang là Máy hỏng, ta bỏ qua không cộng elapsed
+
+    // 4. Cập nhật lên Firebase
+    const nextState = isActivating ? targetState : 'Tạm dừng';
+
+    db.ref(`active_styles/${id}`).update({ 
+        status: nextState, 
+        setupAccumulated: setupAcc, 
+        printAccumulated: printAcc, 
+        lastStatusChange: now 
+    });
+    
+    // Cập nhật tình trạng Plan (nếu có)
+    const pMatch = plansData.find(p => p.styleMO.toUpperCase() === item.code);
+    if (pMatch) {
+        db.ref(`plans/${pMatch.id}`).update({ 
+            tinhTrang: nextState === 'Tạm dừng' ? 'Chưa làm' : `Đang ${nextState}` 
+        });
+    }
+}
 
         function togglePrint(id) { toggleStatus(id, 'In mẫu'); }
 
@@ -1023,5 +1145,15 @@ if (!currentUser) return alert("Vui lòng Đăng nhập để sử dụng chức
 
         setInterval(() => { if(stylesData.length > 0) updateLiveClocks(); }, 1000);
     </script>
+<div id="recent-10-modal" class="hidden fixed inset-0 bg-slate-900/60 z-50 flex justify-center items-center backdrop-blur-sm p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh]">
+        <div class="bg-slate-800 p-3 flex justify-between items-center text-white">
+            <h2 class="font-black text-sm"><i class="fa-solid fa-list-check text-indigo-400 mr-2"></i> 10 ĐƠN XUẤT MẪU GẦN NHẤT</h2>
+            <button onclick="closeModal('recent-10-modal')" class="text-slate-300 hover:text-white transition"><i class="fa-solid fa-xmark fa-lg"></i></button>
+        </div>
+        <div class="p-2 overflow-y-auto" id="recent-10-list">
+            </div>
+    </div>
+</div>
 </body>
 </html>
